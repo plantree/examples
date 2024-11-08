@@ -1,15 +1,15 @@
 #pragma once
 
-using default_deleter = void (*)(void *);
+#include <memory>
 
-template <typename T, typename Deleter = default_deleter> class unique_ptr {
+template <typename T, typename Deleter = std::default_delete<T>> class unique_ptr {
 public:
   explicit unique_ptr(T *ptr = nullptr)
-      : ptr_(ptr), deleter_([](void *p) { delete static_cast<T *>(p); }) {}
+      : ptr_(ptr) {}
 
   ~unique_ptr() {
     if (ptr_) {
-      deleter_(ptr_);
+      Deleter()(ptr_);
     }
   }
 
@@ -18,19 +18,15 @@ public:
 
   unique_ptr(unique_ptr &&other) noexcept {
     ptr_ = other.ptr_;
-    deleter_ = other.deleter_;
     other.ptr_ = nullptr;
-    other.deleter_ = nullptr;
   }
   unique_ptr &operator=(unique_ptr &&other) noexcept {
     if (this != &other) {
       if (ptr_) {
-        deleter_(ptr_);
+        Deleter()(ptr_);
       }
       ptr_ = other.ptr_;
-      deleter_ = other.deleter_;
       other.ptr_ = nullptr;
-      other.deleter_ = nullptr;
     }
     return *this;
   }
@@ -45,12 +41,11 @@ public:
 
   void reset(T *ptr = nullptr) {
     if (ptr_) {
-      deleter_(ptr_);
+      Deleter()(ptr_);
     }
     ptr_ = ptr;
   }
 
 private:
   T *ptr_;
-  Deleter deleter_;
 };
